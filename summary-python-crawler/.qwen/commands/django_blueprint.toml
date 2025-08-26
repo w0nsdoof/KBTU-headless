@@ -1,0 +1,89 @@
+title = "USER PROMPT (Django implementation blueprint)"
+prompt = """
+Create a concise, professional document that outlines a Python/Django implementation approach for the KBTU headless site. Do NOT generate full code; focus on architecture, app boundaries, responsibilities, and example interfaces. Use the available context files if present:
+- /mnt/data/site_audit/prd_skeleton.md
+- /mnt/data/site_audit/summary_report.md
+
+## Purpose
+Provide a Django-first blueprint that an engineering team can follow to kick off development. Avoid boilerplate and long code; include only small illustrative snippets (≤10–15 lines) where clarity is needed.
+
+## Required Sections (use clear headings, bullets, and small tables)
+1) Project Structure & Conventions
+   - Repository layout (monorepo vs split), sample tree
+   - Environments (local, staging, prod), settings strategy (base.py, local.py, prod.py)
+   - Python version, Django/DRF versions, key libs (drf-spectacular, django-environ, django-redis, whitenoise or equivalent, storages)
+   - Configuration via env vars; 12-factor alignment
+
+2) Apps & Responsibilities (bounded contexts)
+   - Core apps with one-line purpose and key models (names only, no full schema):
+     - content (StaticPage, Article, Event, Program, Department, FacultyProfile)
+     - media (asset storage, image variants, alt/captions)
+     - seo (meta, canonical, hreflang, sitemap, structured data)
+     - search (query endpoint, indexing pipeline, adapters: Postgres trigram / Meilisearch / Algolia)
+     - accounts (admin/editor roles, JWT/OIDC integration if needed)
+     - api (DRF endpoints, versioning, throttling, pagination)
+     - integration (analytics, chat widget toggles, webhooks)
+   - Inter-app dependencies (who can import whom) and anti-coupling rules
+
+3) Data Model Overview (names & relationships only)
+   - Key entities and relationships (ER-style text or small diagram)
+   - Slugs, locales/i18n strategy, publication workflow (draft/published/scheduled), revisions
+
+4) API Layer (DRF)
+   - Versioning strategy (/api/v1), routing layout and example endpoints (list/detail/search)
+   - Pagination (page/limit), filtering, ordering
+   - Serializer responsibilities vs Presenter layer
+   - Auth (read-only public vs authenticated CMS ops), throttling, caching headers (ETag/Last-Modified)
+
+5) SEO & Sitemaps
+   - Where canonical/hreflang/meta come from (fields vs computed)
+   - JSON-LD generation points (Article, Event, Organization, BreadcrumbList)
+   - Sitemap index + per-type sitemaps; robots.txt handling
+
+6) Media & File Storage
+   - Storage backends (local dev vs S3/GCS in prod), URLs, signed URLs if needed
+   - Image rendition pipeline (variants, WebP/AVIF), cache invalidation
+
+7) Search Strategy
+   - Minimal viable (DB, trigram) vs external engine (Meilisearch/Algolia)
+   - Indexing triggers (post_save, webhooks, management commands)
+   - Relevance tuning inputs (title, summary, tags, recency)
+
+8) Caching & Performance
+   - Django cache (redis), per-view/per-object caching
+   - Cache keys and invalidation on publish
+   - Static assets/headers, CDN considerations
+
+9) Security & Compliance
+   - Allowed hosts, HTTPS, CSRF, CORS, rate limits
+   - Admin hardening, audit logs for content changes
+   - PII handling (faculty emails/phones), GDPR-style considerations
+
+10) Testing Strategy
+   - Unit (models/serializers), API contract tests (OpenAPI), smoke tests
+   - Fixtures/factories, data-seeding for staging
+   - Performance baselines (P95 API < 300ms), accessibility hooks for frontend integration
+
+11) Operations
+   - Migrations policy, management commands (reindex, rebuild_sitemap, import_legacy)
+   - Observability (logging structure, Sentry, health checks)
+   - CI/CD outline (lint/test/migrate/deploy), feature environments
+
+12) Migration Plan (high-level)
+   - URL mapping & redirects, content import stages, media sync
+   - Acceptance criteria for parity with legacy
+
+## Formatting Rules
+- Use markdown with short sections, bullets, and small tables.
+- Include at most a few short illustrative snippets (≤10–15 lines) for:
+  - settings structure
+  - example model skeleton (names/fields only)
+  - example DRF view/serializer skeleton
+- Include an ASCII “boxes-and-arrows” diagram of app boundaries and data flow.
+- End with a checklist of “Day-1 tasks” and “Week-1 milestones.”
+
+## Constraints
+- No full implementations, no long code blocks, no vendor-specific secrets.
+- Keep under ~1,200 words.
+- If a referenced input file is missing, proceed with generic best practices for a university content site.
+"""

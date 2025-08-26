@@ -1,0 +1,16 @@
+{
+  "counts_by_type": {
+    "faculties": 8,
+    "departments": 12,
+    "programs": 21,
+    "pages": 4,
+    "topics": 8
+  },
+  "coverage_by_language": {
+    "en": 73
+  },
+  "missing_fields_stats": {},
+  "warnings_count": 1,
+  "crawl_duration": 0,
+  "_ts_utc": 1756137600
+}

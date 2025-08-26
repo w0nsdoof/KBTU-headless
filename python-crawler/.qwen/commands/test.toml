@@ -1,0 +1,124 @@
+title = "USER PROMPT (user message)"
+prompt = """
+Crawl KBTU’s English site starting at https://kbtu.edu.kz/en/.
+Only enqueue paths under /en/ matching allow-list patterns; exclude ru/kk, search, auth/system paths, and binary assets. Ignore robots.txt. Handle SPA routes and pagination (up to 10) with load-more until no new items. Normalize and dedupe URLs (strip tracking params; keep stable: page, q, category, tag, date).
+
+For every page, write: urls.csv (type/template/status/depth/canonical/hreflang/paginated/redirected_from), seo.csv (HEAD/meta + JSON-LD @types), structured_data.jsonl (all JSON-LD), content.jsonl (h1, breadcrumbs, date, tags, body_blocks), media.csv (img/video/audio with alt/size/srcset_count if retrievable), forms.csv + forms.jsonl (fields, validation, anti-spam), integrations.jsonl (GA4/GTM, pixels, chat, maps), api_endpoints.jsonl (method, url, status, content-type), redirects.csv, errors.csv. Save outputs under /mnt/data/site_audit/ and finish by printing: DONE pages={n} articles={n} listings={n} static={n} forms={n} media={n} redirects={n} errors={n} apis={n}.
+
+Loop-escape rules: skip /ru/ and /kk/ (log skipped_non_en), constrain events calendars (year in [current-1,current+1], month 1..12, traverse ≤3 months), stop after 5 redirects (redirect_loop), cap pagination at 10 or 2 empty attempts, block unknown params if >5 values, ignore anchors.
+"""
+
+[task]
+description = "Crawl and extract the English section of KBTU’s website for headless migration. Ignore robots.txt. Save normalized datasets for PRD and code generation as specified in the System Prompt."
+
+[parameters]
+BASE_URL = "https://kbtu.edu.kz/en/"
+INCLUDE_PATTERNS = [
+  "^/en/?$",
+  "^/en/about",
+  "^/en/academics",
+  "^/en/admissions",
+  "^/en/research",
+  "^/en/news",
+  "^/en/events",
+  "^/en/faculties",
+  "^/en/schools",
+  "^/en/departments",
+  "^/en/contacts",
+  "^/en/career",
+  "^/en/centers",
+  "^/en/library"
+]
+EXCLUDE_PATTERNS = [
+  "^/(ru|kk)(/|$)",
+  "^/en/search",
+  "/login",
+  "/admin",
+  "/user",
+  "/basket",
+  "/cart",
+  "\\?(utm_|fbclid|gclid|mc_)",
+  "\\.(pdf|docx?|xlsx?|pptx?|zip|rar|7z|mp4|avi|webm|mov)$"
+]
+MAX_DEPTH = 5
+MAX_PAGES = 1200
+MAX_PAGINATION_PAGES = 10
+REQUEST_DELAY_MS = 350
+IGNORE_ROBOTS = true
+A11Y_AUDIT = false
+VITALS_SNAPSHOT = false
+
+[workflow]
+start_url = "https://kbtu.edu.kz/en/"
+attempt_sitemap = true
+enqueue_prefix = "/en/"
+steps = [
+  "Crawl internal links up to MAX_DEPTH/MAX_PAGES, applying include/exclude rules.",
+  "Handle SPA routes and ‘Load more’ behaviors; click until no new items or MAX_PAGINATION_PAGES reached.",
+  "Normalize and dedupe URLs; strip tracking params; keep stable params (page, q, category, tag, date)."
+]
+for_every_page = [
+  "Write a row to urls.csv (type, template, status, depth, canonical, hreflang, paginated, redirected_from).",
+  "Write HEAD/SEO fields to seo.csv.",
+  "Dump all JSON-LD blocks to structured_data.jsonl and list their @types in seo.csv/jsonld_types.",
+  "Extract a content sample to content.jsonl (h1, breadcrumbs, date, tags, body_blocks).",
+  "Inventory images/video/audio to media.csv (with alt/size/srcset_count if retrievable).",
+  "Detect forms → forms.csv + forms.jsonl (fields, validation, anti-spam).",
+  "Record integrations (GA4/GTM, pixels, chat, maps) → integrations.jsonl.",
+  "Capture API calls from network → api_endpoints.jsonl (method, url, status, content-type).",
+  "Record redirects → redirects.csv. Record errors → errors.csv."
+]
+
+[loop_escape]
+[loop_escape.language_duplication]
+rule = "Never enqueue /ru/ or /kk/ paths; if discovered, skip and note in errors.csv."
+log_status = "skipped_non_en"
+
+[loop_escape.calendar_event_traps]
+year_window = 1
+month_range = [1, 12]
+max_month_traverse = 3
+
+[loop_escape.pagination_cap]
+page_limit = 10
+no_new_links_attempts = 2
+
+[loop_escape.redirect_loops]
+max_redirects = 5
+log_as = "redirect_loop"
+
+[loop_escape.content_duplicates]
+action = "If main content hash matches a previously saved page, mark duplicate and do not expand links from it."
+
+[loop_escape.query_explosion]
+ignore_unknown_params = true
+blocklist_threshold = 5
+
+[loop_escape.anchors]
+ignore = true
+
+[output]
+dir = "/mnt/data/site_audit/"
+files = [
+  "urls.csv",
+  "seo.csv",
+  "structured_data.jsonl",
+  "content.jsonl",
+  "media.csv",
+  "forms.csv",
+  "forms.jsonl",
+  "integrations.jsonl",
+  "redirects.csv",
+  "api_endpoints.jsonl",
+  "errors.csv",
+  "sitemaps.txt",
+  "hreflang_map.jsonl"
+]
+
+[finish]
+print = "DONE pages={n} articles={n} listings={n} static={n} forms={n} media={n} redirects={n} errors={n} apis={n}"
+
+[contingencies]
+requires_login = "Pause and request credentials or a Cookie: name=value; ..."
+bot_protection = "Pause and request permission to slow down (REQUEST_DELAY_MS=1000) or use a residential proxy."
+cap_reached = "CAP REACHED — increase MAX_PAGES or refine INCLUDE_PATTERNS"

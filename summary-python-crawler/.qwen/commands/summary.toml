@@ -1,0 +1,82 @@
+title = "Summarization of the extracted datasets from ./data/site_audit/"
+prompt = """
+Summarize the extracted datasets from ./data/site_audit/ for the KBTU English website.
+
+Read the following inputs (if a file is missing, treat it as empty):
+- urls.csv
+- seo.csv
+- content.jsonl
+- forms.jsonl
+- integrations.jsonl
+- api_endpoints.jsonl
+
+Produce a concise Markdown report with tables where useful. Do NOT include raw rows or generate code. Provide only structured summaries and actionable insights.
+
+Your report must include:
+1) High-level overview
+   - Total pages crawled (from urls.csv)
+   - Breakdown by inferred page type (e.g., listing, static/page, article, event, faculty/department, 404)
+   - Counts of media elements and forms (use media.csv count if available; otherwise infer from content.jsonl/forms.jsonl)
+2) Sitemap structure (logical groups)
+   - Main sections (e.g., About, Academics, Admissions, Research, News, Events, Faculties/Schools, Departments, Contacts, Library)
+   - Representative URLs for each group (deduplicated, limit 5 per group)
+3) Proposed content types (names only, no schema)
+   - List candidate types detected from content and URL patterns (e.g., Article, Event, StaticPage, Faculty, Department, Announcement, Program)
+4) SEO overview
+   - % pages with <title>, % with meta description, presence/coverage of JSON-LD (@types seen)
+   - Notes on canonical/hreflang usage patterns (from seo.csv/urls.csv)
+5) Forms summary
+   - Typical forms (contact/apply/subscribe/etc.), common fields, client/server validation patterns, anti-spam usage (recaptcha/honeypot)
+6) Integrations summary
+   - Third-party tools observed (GA4/GTM, pixels, chat, maps), with IDs if present
+7) API endpoints overview
+   - Count of unique endpoints and their apparent purposes (e.g., listings, detail, search, filters)
+8) Risks & migration notes (bullet list)
+   - Pagination/infinite scroll observations, calendar/date traps, duplicate content patterns, redirect/404 notes (even if counts are zero)
+
+Finish with a short checklist (bullets) for PRD next steps.
+
+Output only the final Markdown report.
+"""
+
+[task]
+description = "Summarize and analyze crawled datasets for PRD preparation and headless migration planning."
+
+[parameters]
+INPUT_DIR = "./data/site_audit"
+REQUIRED_FILES = [
+  "urls.csv",
+  "seo.csv",
+  "content.jsonl",
+  "forms.jsonl",
+  "integrations.jsonl",
+  "api_endpoints.jsonl"
+]
+OPTIONAL_FILES = [
+  "media.csv",
+  "redirects.csv",
+  "errors.csv",
+  "structured_data.jsonl",
+  "sitemaps.txt",
+  "hreflang_map.jsonl"
+]
+
+[workflow]
+steps = [
+  "Load CSV/JSONL files from INPUT_DIR; if a file is missing, continue.",
+  "Compute page totals and type breakdown from urls.csv.",
+  "Derive section groups from URL prefixes and breadcrumbs in content.jsonl.",
+  "Aggregate SEO coverage from seo.csv (title, meta description, JSON-LD types, canonical/hreflang).",
+  "Summarize forms from forms.jsonl (fields, validation, anti-spam).",
+  "List integrations from integrations.jsonl (tool, id).",
+  "Cluster api_endpoints.jsonl by path/purpose; count unique endpoints.",
+  "Note risks from redirects.csv/errors.csv and pagination hints.",
+  "Render a single Markdown report with headings and tables."
+]
+
+[output]
+dir = ".\site_audit"
+file = "summary_report.md"
+
+[finish]
+print = "SUMMARY DONE: report=.\site_audit\summary_report.md"
